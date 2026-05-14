@@ -395,8 +395,11 @@ function Selling() {
                           <p className="text-lg font-bold text-gray-900 mt-1">
                             Rs {p.price}
                           </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-xs text-gray-700 mt-0.5">
                             Stock: {p.stock} units
+                          </p>
+                          <p className="text-xs font-medium text-gray-700 mt-1">
+                            Rs {p.description}
                           </p>
                           <button
                             onClick={() => addToCart(p)}

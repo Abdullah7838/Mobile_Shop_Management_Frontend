@@ -1,4 +1,4 @@
-// AddProduct Component - Frontend with buyprice and toastify
+// AddProduct Component - Working with toastify
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -27,6 +27,7 @@ function AddProduct() {
 
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // FETCH CATEGORIES FROM SERVER
   useEffect(() => {
@@ -34,10 +35,6 @@ function AddProduct() {
       try {
         const res = await axios.get(`${BackendApi}/api/categories`);
         setCategories(res.data.data);
-        const appleExists = res.data.some((cat) => cat.name === "Apple");
-        if (!appleExists && res.data.length > 0) {
-          setFormData((prev) => ({ ...prev, category: res.data[0].name }));
-        }
       } catch (err) {
         console.log(err);
         toast.error("Failed to load categories");
@@ -56,8 +53,6 @@ function AddProduct() {
     });
   };
 
-  const [loading, setLoading] = useState(false);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -70,7 +65,9 @@ function AddProduct() {
     }
 
     setLoading(true);
-    const loadingToast = toast.loading("Adding product...");
+    
+    // Show loading toast
+    const loadingToastId = toast.loading("Adding product...");
 
     try {
       const payload = {
@@ -89,8 +86,13 @@ function AddProduct() {
 
       console.log(res.data);
       
-      toast.dismiss(loadingToast);
-      toast.success("Product Added Successfully!");
+      // Update loading toast to success
+      toast.update(loadingToastId, {
+        render: "Product Added Successfully!",
+        type: "success",
+        isLoading: false,
+        autoClose: 3000,
+      });
 
       // Reset form
       setFormData({
@@ -113,8 +115,13 @@ function AddProduct() {
       });
     } catch (err) {
       console.log(err);
-      toast.dismiss(loadingToast);
-      toast.error(err.response?.data?.message || "Failed to Add Product");
+      // Update loading toast to error
+      toast.update(loadingToastId, {
+        render: err.response?.data?.message || "Failed to Add Product",
+        type: "error",
+        isLoading: false,
+        autoClose: 4000,
+      });
     } finally {
       setLoading(false);
     }
@@ -122,7 +129,6 @@ function AddProduct() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6 md:p-10">
-      
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -201,11 +207,6 @@ function AddProduct() {
                       ))
                     )}
                   </select>
-                )}
-                {!loadingCategories && categories.length === 0 && (
-                  <p className="text-xs text-amber-600">
-                    No categories found on server. Using default "Apple".
-                  </p>
                 )}
               </div>
 
@@ -286,7 +287,7 @@ function AddProduct() {
                 </select>
               </div>
 
-              {/* Buy Price - NEW FIELD */}
+              {/* Buy Price */}
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">
                   Buy Price (Rs) <span className="text-red-500">*</span>
@@ -302,7 +303,7 @@ function AddProduct() {
                 />
               </div>
 
-              {/* Price */}
+              {/* Sell Price */}
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">
                   Sell Price (Rs) <span className="text-red-500">*</span>
@@ -419,7 +420,6 @@ function AddProduct() {
                 <button
                   type="submit"
                   disabled={loading}
-                  id="Submitbutton"
                   className="w-full cursor-pointer bg-black text-white py-3.5 rounded-xl font-medium shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 text-lg disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {loading ? (

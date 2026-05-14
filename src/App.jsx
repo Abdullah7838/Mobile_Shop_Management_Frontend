@@ -19,7 +19,18 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <ToastContainer position="top-left" autoClose={1500} />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />{" "}
       <Navbar />
       <Routes>
         <Route path="/products" element={<AllProducts />} />
