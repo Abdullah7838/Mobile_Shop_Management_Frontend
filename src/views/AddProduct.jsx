@@ -1,7 +1,8 @@
-// AddProduct Component - Working with toastify
+// AddProduct Component - Fixed with proper toastify notifications
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css"; // Make sure CSS is imported
 
 const BackendApi = import.meta.env.VITE_BACKEND_API;
 
@@ -60,14 +61,27 @@ function AddProduct() {
 
     // Validate required fields
     if (!formData.name || !formData.brand || !formData.buyprice || !formData.price) {
-      toast.error("Please fill in all required fields (Name, Brand, Buy Price, Price)");
+      toast.error("Please fill in all required fields (Name, Brand, Buy Price, Price)", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
       return;
     }
 
     setLoading(true);
     
     // Show loading toast
-    const loadingToastId = toast.loading("Adding product...");
+    const loadingToastId = toast.loading("Adding product to catalog...", {
+      position: "top-right",
+      hideProgressBar: false,
+      closeOnClick: false,
+      pauseOnHover: true,
+      draggable: true,
+    });
 
     try {
       const payload = {
@@ -88,10 +102,21 @@ function AddProduct() {
       
       // Update loading toast to success
       toast.update(loadingToastId, {
-        render: "Product Added Successfully!",
+        render: `✅ ${res.data.data.name} added successfully!`,
         type: "success",
         isLoading: false,
         autoClose: 3000,
+        closeOnClick: true,
+      });
+
+      // Show additional success toast
+      toast.success(`Product "${formData.name}" has been added to inventory!`, {
+        position: "top-right",
+        autoClose: 4000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
       });
 
       // Reset form
@@ -113,14 +138,33 @@ function AddProduct() {
         warrantyMonths: "",
         imeiNumber: "",
       });
+
+      // Optional: Redirect after successful addition
+      // setTimeout(() => {
+      //   navigate("/products");
+      // }, 2000);
+
     } catch (err) {
       console.log(err);
+      
       // Update loading toast to error
       toast.update(loadingToastId, {
-        render: err.response?.data?.message || "Failed to Add Product",
+        render: err.response?.data?.message || "❌ Failed to add product",
         type: "error",
         isLoading: false,
         autoClose: 4000,
+        closeOnClick: true,
+      });
+
+      // Show additional error details
+      const errorMessage = err.response?.data?.message || "Network error. Please check your connection.";
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
       });
     } finally {
       setLoading(false);

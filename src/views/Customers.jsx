@@ -12,7 +12,7 @@ function Customers() {
       try {
         const res = await axios.get(`${BackendApi}/api/customers`);
 
-        setCustomers(res.data?.data || res.data || []);
+        setCustomers(res.data?.data.reverse() || res.data.reverse() || []);
       } catch (err) {
         console.log(err);
         toast.error("Failed to load customers");

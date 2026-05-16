@@ -28,8 +28,9 @@ function Dashboard() {
         ]);
 
         const productsData = productRes.data?.data || [];
-        const customersData = customerRes.data || [];
-        const invoicesData = invoiceRes.data || [];
+        const customersData = customerRes.data.data || [];
+        const invoicesData = invoiceRes.data.data || [];
+        console.log(invoicesData)
 
         setProducts(productsData);
         setProductsCount(productsData.length);

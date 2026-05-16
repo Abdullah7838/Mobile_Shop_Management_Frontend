@@ -28,11 +28,10 @@ function Invoice() {
     const date = new Date(dateString);
     return date.toLocaleString("en-PK", {
       year: "numeric",
-      month: "long",
-      day: "numeric",
+      month: "short",
+      day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
       hour12: true,
     });
   };
@@ -49,16 +48,16 @@ function Invoice() {
       cloneElement.style.position = 'fixed';
       cloneElement.style.top = '0';
       cloneElement.style.left = '0';
-      cloneElement.style.width = '800px';
+      cloneElement.style.width = '80mm';
       cloneElement.style.backgroundColor = '#ffffff';
       cloneElement.style.margin = '0';
-      cloneElement.style.padding = '20px';
+      cloneElement.style.padding = '4mm';
       cloneElement.style.zIndex = '9999';
       
       document.body.appendChild(cloneElement);
       
       const canvas = await html2canvas(cloneElement, {
-        scale: 2,
+        scale: 3,
         backgroundColor: "#ffffff",
         logging: false,
         useCORS: false,
@@ -72,32 +71,21 @@ function Invoice() {
       
       const pdf = new jsPDF({
         unit: "mm",
-        format: "a4",
+        format: [80, 297],
         orientation: "portrait",
       });
       
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      const imgWidth = pdfWidth - 20;
+      const imgWidth = pdfWidth - 6;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       const xPosition = (pdfWidth - imgWidth) / 2;
-      let yPosition = 10;
       
-      if (imgHeight <= pdfHeight - 20) {
-        pdf.addImage(imgData, "PNG", xPosition, yPosition, imgWidth, imgHeight);
-      } else {
-        const scaledHeight = pdfHeight - 20;
-        const scaledWidth = (imgWidth * scaledHeight) / imgHeight;
-        const adjustedXPosition = (pdfWidth - scaledWidth) / 2;
-        pdf.addImage(imgData, "PNG", adjustedXPosition, yPosition, scaledWidth, scaledHeight);
-      }
-      
-      pdf.save(`invoice_${invoice.invoiceNumber}.pdf`);
+      pdf.addImage(imgData, "PNG", xPosition, 2, imgWidth, imgHeight);
+      pdf.save(`receipt_${invoice.invoiceNumber}.pdf`);
       
     } catch (error) {
       console.error("Error generating PDF:", error);
-      alert("Error generating PDF. Please try again or use Print option.");
+      alert("Error generating PDF. Please try again.");
     } finally {
       setIsDownloading(false);
     }
@@ -108,62 +96,50 @@ function Invoice() {
     
     if (!printContent) return;
     
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    const printWindow = window.open('', '_blank', 'width=450,height=650');
     
     if (!printWindow) {
       alert("Please allow pop-ups to print the invoice");
       return;
     }
     
+    const styles = `
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        body {
+          font-family: 'Courier New', Courier, monospace;
+          background: white;
+          width: 80mm;
+          margin: 0 auto;
+          padding: 4mm;
+        }
+        @media print {
+          @page {
+            size: 80mm auto;
+            margin: 0mm;
+          }
+          body {
+            margin: 0;
+            padding: 4mm;
+          }
+        }
+      </style>
+    `;
+    
     const printHtml = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Invoice ${invoice.invoiceNumber}</title>
+          <title>Receipt ${invoice.invoiceNumber}</title>
           <meta charset="UTF-8">
-          <style>
-            * {
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-            }
-            body {
-              font-family: 'Courier New', 'Monaco', monospace;
-              background: white;
-              padding: 20px;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              min-height: 100vh;
-            }
-            .print-wrapper {
-              width: 100%;
-              max-width: 800px;
-              margin: 0 auto;
-            }
-            .border-bottom-2 { border-bottom: 2px solid #000000; }
-            .border-bottom-1 { border-bottom: 1px solid #000000; }
-            .border-top-2 { border-top: 2px solid #000000; }
-            .bg-gray-50 { background-color: #f9f9f9; }
-            .text-right { text-align: right; }
-            .font-bold { font-weight: bold; }
-            .p-24 { padding: 24px; }
-            .p-16 { padding: 16px; }
-            .p-8 { padding: 8px; }
-            .mb-12 { margin-bottom: 12px; }
-            .flex { display: flex; }
-            .justify-between { justify-content: space-between; }
-            .grid-cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { padding: 8px; }
-            th { text-align: left; font-weight: bold; }
-            .text-right { text-align: right; }
-          </style>
+          ${styles}
         </head>
         <body>
-          <div class="print-wrapper">
-            ${printContent.outerHTML}
-          </div>
+          ${printContent.outerHTML}
         </body>
       </html>
     `;
@@ -182,263 +158,425 @@ function Invoice() {
 
   if (!invoice) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="bg-white p-8 rounded shadow-md">
-          <p className="text-black text-lg">Loading Invoice...</p>
+      <div style={styles.loadingContainer}>
+        <div style={styles.loadingCard}>
+          <div style={styles.loadingSpinner}></div>
+          <p style={styles.loadingText}>Loading receipt...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-4xl mx-auto">
+    <div style={styles.mainContainer}>
+      <div style={styles.contentWrapper}>
         {/* Action Buttons */}
-        <div className="mb-6 flex gap-3 justify-end no-print">
-          <button
-            onClick={downloadPDF}
-            disabled={isDownloading}
-            className="bg-black cursor-pointer hover:bg-gray-800 text-white px-6 py-2 rounded transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {isDownloading ? "Generating PDF..." : "Download PDF"}
+        <div style={styles.buttonContainer} className="no-print">
+          <button onClick={downloadPDF} disabled={isDownloading} style={styles.downloadButton}>
+            Download PDF
           </button>
-          <button
-            onClick={handlePrint}
-            className="bg-gray-700 cursor-pointer hover:bg-gray-800 text-white px-6 py-2 rounded transition-colors"
-          >
-            Print Invoice
+          <button onClick={handlePrint} style={styles.printButton}>
+            Print Receipt
           </button>
         </div>
 
-        {/* Invoice Design */}
-        <div
-          ref={invoiceRef}
-          className="invoice-container"
-          style={{
-            fontFamily: "'Courier New', 'Monaco', monospace",
-            width: '100%',
-            maxWidth: '800px',
-            margin: '0 auto',
-            color: '#000000',
-            backgroundColor: '#ffffff',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-          }}
-        >
-          {/* Header Section */}
-          <div style={{ borderBottom: '2px solid #000000', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <h1 
-                  style={{ 
-                    fontSize: '36px', 
-                    fontWeight: 'bold', 
-                    marginBottom: '8px',
-                    color: '#000000',
-                    fontFamily: "'Courier New', 'Monaco', monospace"
-                  }}
-                >
-                  INVOICE
-                </h1>
-                <p style={{ color: '#000000', fontSize: '14px' }}>Tax Invoice / Bill of Supply</p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div 
-                  style={{ 
-                    fontSize: '24px', 
-                    fontWeight: 'bold', 
-                    marginBottom: '4px',
-                    color: '#000000',
-                    fontFamily: "'Courier New', 'Monaco', monospace"
-                  }}
-                >
-                  Mobile Shop
-                </div>
-                <p style={{ color: '#000000', fontSize: '12px', margin: '2px 0' }}>123 Main Street, City</p>
-                <p style={{ color: '#000000', fontSize: '12px', margin: '2px 0' }}>Phone: +92 123 4567890</p>
-                <p style={{ color: '#000000', fontSize: '12px', margin: '2px 0' }}>Email: info@mobileshop.com</p>
-                <p style={{ color: '#000000', fontSize: '12px', margin: '2px 0' }}>GST No: 1234567890</p>
-              </div>
+        {/* Professional Receipt Design */}
+        <div ref={invoiceRef} style={styles.receipt}>
+          {/* Header */}
+          <div style={styles.header}>
+            <div style={styles.storeName}>MOBILE SHOP</div>
+            <div style={styles.separatorDouble}></div>
+            <div style={styles.storeInfo}>123 Main Street, City</div>
+            <div style={styles.storeInfo}>Phone: +92 123 4567890</div>
+            <div style={styles.storeInfo}>Email: info@mobileshop.com</div>
+            <div style={styles.storeInfo}>GST: 1234567890</div>
+            <div style={styles.separatorSingle}></div>
+          </div>
+
+          {/* Receipt Type */}
+          <div style={styles.receiptType}>
+            <div style={styles.typeBadge}>SALES RECEIPT</div>
+          </div>
+
+          {/* Transaction Details */}
+          <div style={styles.card}>
+            <div style={styles.cardRow}>
+              <span style={styles.cardLabel}>Invoice Number</span>
+              <span style={styles.cardValue}>{invoice.invoiceNumber}</span>
+            </div>
+            <div style={styles.cardRow}>
+              <span style={styles.cardLabel}>Date & Time</span>
+              <span style={styles.cardValue}>{formatDate(invoice.createdAt)}</span>
+            </div>
+            <div style={styles.cardRow}>
+              <span style={styles.cardLabel}>Payment Method</span>
+              <span style={styles.cardValue}>{invoice.paymentMethod?.toUpperCase()}</span>
+            </div>
+            <div style={styles.cardRow}>
+              <span style={styles.cardLabel}>Payment Status</span>
+              <span style={invoice.paymentStatus === 'paid' ? styles.statusPaid : styles.statusPending}>
+                {invoice.paymentStatus?.toUpperCase()}
+              </span>
             </div>
           </div>
 
-          {/* Invoice Info & Date/Time */}
-          <div style={{ borderBottom: '1px solid #000000', padding: '24px', backgroundColor: '#ffffff' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <div>
-                <p style={{ color: '#000000', fontSize: '14px', fontWeight: 'bold', margin: '0 0 4px 0' }}>Invoice Number</p>
-                <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#000000', margin: '0 0 12px 0' }}>
-                  {invoice.invoiceNumber}
-                </p>
-                <p style={{ color: '#000000', fontSize: '14px', fontWeight: 'bold', margin: '12px 0 4px 0' }}>Invoice Status</p>
-                <p style={{ color: '#000000', fontSize: '14px', fontWeight: '600', margin: 0 }}>
-                  {invoice.invoiceStatus?.toUpperCase()}
-                </p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <p style={{ color: '#000000', fontSize: '14px', fontWeight: 'bold', margin: '0 0 4px 0' }}>Date & Time</p>
-                <p style={{ fontSize: '14px', fontWeight: '500', color: '#000000', margin: '0 0 12px 0' }}>
-                  {formatDate(invoice.createdAt)}
-                </p>
-                <p style={{ color: '#000000', fontSize: '14px', fontWeight: 'bold', margin: '12px 0 4px 0' }}>Payment Method</p>
-                <p style={{ fontSize: '14px', fontWeight: '500', color: '#000000', margin: 0 }}>
-                  {invoice.paymentMethod?.toUpperCase()}
-                </p>
-              </div>
+          {/* Customer Information */}
+          <div style={styles.section}>
+            <div style={styles.sectionTitle}>CUSTOMER DETAILS</div>
+            <div style={styles.customerCard}>
+              <div style={styles.customerName}>{invoice.customerId?.name || "Guest Customer"}</div>
+              {invoice.customerId?.city && (
+                <div style={styles.customerDetail}>Mobile Color: {invoice.customerId.color}</div>
+              )}
+              {invoice.customerId?.phone && (
+                <div style={styles.customerDetail}>Phone: {invoice.customerId.phone}</div>
+              )}
+              {invoice.customerId?.cnic && (
+                <div style={styles.customerDetail}>CNIC: {invoice.customerId.cnic}</div>
+              )}
+              {invoice.customerId?.city && (
+                <div style={styles.customerDetail}>City: {invoice.customerId.city}</div>
+              )}
             </div>
           </div>
 
-          {/* Customer Details */}
-          <div style={{ padding: '24px', borderBottom: '1px solid #000000' }}>
-            <h2 
-              style={{ 
-                fontSize: '18px', 
-                fontWeight: 'bold', 
-                color: '#000000', 
-                marginBottom: '12px',
-                fontFamily: "'Courier New', 'Monaco', monospace"
-              }}
-            >
-              Bill To:
-            </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div>
-                <p style={{ color: '#000000', fontSize: '12px', fontWeight: 'bold', margin: '0 0 4px 0' }}>Customer Name</p>
-                <p style={{ fontWeight: '500', color: '#000000', margin: 0, fontSize: '14px' }}>
-                  {invoice.customerId?.name || "N/A"}
-                </p>
+          {/* Order Items */}
+          <div style={styles.section}>
+            <div style={styles.sectionTitle}>ORDER SUMMARY</div>
+            <div style={styles.itemsHeader}>
+              <span style={{...styles.itemsHeaderText, width: '45%'}}>ITEM</span>
+              <span style={{...styles.itemsHeaderText, width: '15%', textAlign: 'center'}}>QTY</span>
+              <span style={{...styles.itemsHeaderText, width: '20%', textAlign: 'right'}}>PRICE</span>
+              <span style={{...styles.itemsHeaderText, width: '20%', textAlign: 'right'}}>TOTAL</span>
+            </div>
+            {invoice.items?.map((item, index) => (
+              <div key={index} style={styles.itemRow}>
+                <span style={{...styles.itemName, width: '45%'}}>{item.name}</span>
+                <span style={{...styles.itemQty, width: '15%', textAlign: 'center'}}>1</span>
+                <span style={{...styles.itemPrice, width: '20%', textAlign: 'right'}}>{item.price?.toLocaleString()}</span>
+                <span style={{...styles.itemTotal, width: '20%', textAlign: 'right'}}>{item.price?.toLocaleString()}</span>
               </div>
-              <div>
-                <p style={{ color: '#000000', fontSize: '12px', fontWeight: 'bold', margin: '0 0 4px 0' }}>Phone Number</p>
-                <p style={{ fontWeight: '500', color: '#000000', margin: 0, fontSize: '14px' }}>
-                  {invoice.customerId?.phone || "N/A"}
-                </p>
+            ))}
+          </div>
+
+          {/* Totals */}
+          <div style={styles.totalsCard}>
+            {invoice.discount > 0 && (
+              <div style={styles.totalLine}>
+                <span>DISCOUNT</span>
+                <span>- {invoice.discount?.toLocaleString()}</span>
               </div>
-              <div>
-                <p style={{ color: '#000000', fontSize: '12px', fontWeight: 'bold', margin: '0 0 4px 0' }}>CNIC Number</p>
-                <p style={{ fontWeight: '500', color: '#000000', margin: 0, fontSize: '14px' }}>
-                  {invoice.customerId?.cnic || "N/A"}
-                </p>
+            )}
+            {invoice.tax > 0 && (
+              <div style={styles.totalLine}>
+                <span>TAX</span>
+                <span>{invoice.tax?.toLocaleString()}</span>
               </div>
-              <div>
-                <p style={{ color: '#000000', fontSize: '12px', fontWeight: 'bold', margin: '0 0 4px 0' }}>Phone Color</p>
-                <p style={{ fontWeight: '500', color: '#000000', margin: 0, fontSize: '14px' }}>
-                  {invoice.customerId?.color || "N/A"}
-                </p>
-              </div>
-              <div>
-                <p style={{ color: '#000000', fontSize: '12px', fontWeight: 'bold', margin: '0 0 4px 0' }}>City</p>
-                <p style={{ fontWeight: '500', color: '#000000', margin: 0, fontSize: '14px' }}>
-                  {invoice.customerId?.city || "N/A"}
-                </p>
-              </div>
+            )}
+            <div style={styles.grandTotalLine}>
+              <span style={styles.grandTotalText}>TOTAL AMOUNT</span>
+              <span style={styles.grandTotalAmount}>{invoice.total?.toLocaleString()}</span>
             </div>
           </div>
 
-          {/* Items Table */}
-          <div style={{ padding: '24px' }}>
-            <h2 
-              style={{ 
-                fontSize: '18px', 
-                fontWeight: 'bold', 
-                color: '#000000', 
-                marginBottom: '12px',
-                fontFamily: "'Courier New', 'Monaco', monospace"
-              }}
-            >
-              Order Items
-            </h2>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #000000', backgroundColor: '#f9f9f9' }}>
-                    <th style={{ textAlign: 'left', padding: '8px', fontWeight: 'bold', color: '#000000', fontSize: '12px' }}>S.No</th>
-                    <th style={{ textAlign: 'left', padding: '8px', fontWeight: 'bold', color: '#000000', fontSize: '12px' }}>Product Name</th>
-                    <th style={{ textAlign: 'right', padding: '8px', fontWeight: 'bold', color: '#000000', fontSize: '12px' }}>Unit Price</th>
-                    <th style={{ textAlign: 'right', padding: '8px', fontWeight: 'bold', color: '#000000', fontSize: '12px' }}>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoice.items?.map((item, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid #000000' }}>
-                      <td style={{ padding: '8px', color: '#000000', fontSize: '12px' }}>{index + 1}</td>
-                      <td style={{ padding: '8px', color: '#000000', fontSize: '12px' }}>
-                        {item.name}
-                      </td>
-                      <td style={{ padding: '8px', textAlign: 'right', color: '#000000', fontSize: '12px' }}>
-                        Rs. {item.price?.toLocaleString()}
-                      </td>
-                      <td style={{ padding: '8px', textAlign: 'right', color: '#000000', fontSize: '12px' }}>
-                        Rs. {item.price?.toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Totals Section */}
-          <div style={{ borderTop: '2px solid #000000', padding: '24px', backgroundColor: '#f9f9f9' }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <div style={{ width: '320px' }}>
-                {invoice.discount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-                    <span style={{ color: '#000000', fontSize: '14px', fontWeight: 'bold' }}>Discount:</span>
-                    <span style={{ fontWeight: '500', color: '#000000', fontSize: '14px' }}>
-                      - Rs. {invoice.discount?.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {invoice.tax > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-                    <span style={{ color: '#000000', fontSize: '14px', fontWeight: 'bold' }}>Tax:</span>
-                    <span style={{ fontWeight: '500', color: '#000000', fontSize: '14px' }}>
-                      Rs. {invoice.tax?.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderTop: '2px solid #000000', marginTop: '8px' }}>
-                  <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#000000' }}>
-                    Total Amount:
-                  </span>
-                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#000000' }}>
-                    Rs. {invoice.total?.toLocaleString()}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-                  <span style={{ color: '#000000', fontSize: '14px', fontWeight: 'bold' }}>Payment Status:</span>
-                  <span style={{ fontWeight: '600', color: '#000000', fontSize: '14px' }}>
-                    {invoice.paymentStatus?.toUpperCase()}
-                  </span>
-                </div>
-              </div>
-            </div>
+          {/* Terms & Conditions */}
+          <div style={styles.termsCard}>
+            <div style={styles.termsTitle}>TERMS & CONDITIONS</div>
+            <div style={styles.termItem}>1. Items cannot be returned after 7 days</div>
+            <div style={styles.termItem}>2. Original receipt required for warranty</div>
+            <div style={styles.termItem}>3. Warranty valid for 12 months from purchase</div>
+            <div style={styles.termItem}>4. Keep this receipt for future reference</div>
           </div>
 
           {/* Footer */}
-          <div style={{ borderTop: '1px solid #000000', padding: '16px', textAlign: 'center', backgroundColor: '#ffffff' }}>
-            <p style={{ color: '#000000', fontSize: '14px', fontWeight: 'bold', margin: '0 0 4px 0' }}>
-              Thank you for your business!
-            </p>
-            <p style={{ color: '#000000', fontSize: '11px', margin: 0 }}>
-              This is a computer generated invoice
-            </p>
+          <div style={styles.footer}>
+            <div style={styles.separatorSingle}></div>
+            <div style={styles.thankYou}>Thank you for your business!</div>
+            <div style={styles.footerText}>This is a computer generated receipt</div>
           </div>
         </div>
       </div>
 
-      {/* Print Styles */}
       <style>
         {`
           @media print {
             .no-print {
               display: none !important;
             }
+            body {
+              margin: 0;
+              padding: 0;
+              background: white;
+            }
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
           }
         `}
       </style>
     </div>
   );
 }
+
+const styles = {
+  loadingContainer: {
+    minHeight: '100vh',
+    backgroundColor: '#f3f4f6',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingCard: {
+    backgroundColor: '#ffffff',
+    padding: '32px',
+    borderRadius: '4px',
+    textAlign: 'center',
+  },
+  loadingSpinner: {
+    width: '32px',
+    height: '32px',
+    border: '2px solid #e5e7eb',
+    borderTop: '2px solid #000000',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+    margin: '0 auto 16px',
+  },
+  loadingText: {
+    color: '#000000',
+    fontSize: '12px',
+  },
+  mainContainer: {
+    minHeight: '100vh',
+    backgroundColor: '#f3f4f6',
+    padding: '20px',
+  },
+  contentWrapper: {
+    maxWidth: '420px',
+    margin: '0 auto',
+  },
+  buttonContainer: {
+    marginBottom: '16px',
+    display: 'flex',
+    gap: '12px',
+    justifyContent: 'center',
+  },
+  downloadButton: {
+    backgroundColor: '#000000',
+    color: '#ffffff',
+    padding: '8px 20px',
+    borderRadius: '4px',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '12px',
+    fontWeight: '500',
+  },
+  printButton: {
+    backgroundColor: '#374151',
+    color: '#ffffff',
+    padding: '8px 20px',
+    borderRadius: '4px',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '12px',
+    fontWeight: '500',
+  },
+  receipt: {
+    fontFamily: "'Courier New', 'Courier', monospace",
+    width: '80mm',
+    margin: '0 auto',
+    backgroundColor: '#ffffff',
+    padding: '3mm',
+    fontSize: '10px',
+    fontWeight: 'normal',
+    color: '#000000',
+    lineHeight: '1.4',
+  },
+  header: {
+    textAlign: 'center',
+    marginBottom: '10px',
+  },
+  storeName: {
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: '#000000',
+    marginBottom: '6px',
+  },
+  separatorDouble: {
+    height: '2px',
+    backgroundColor: '#000000',
+    margin: '6px 0',
+  },
+  separatorSingle: {
+    height: '1px',
+    backgroundColor: '#000000',
+    margin: '6px 0',
+  },
+  storeInfo: {
+    fontSize: '9px',
+    color: '#000000',
+    margin: '2px 0',
+  },
+  receiptType: {
+    textAlign: 'center',
+    marginBottom: '10px',
+  },
+  typeBadge: {
+    fontSize: '11px',
+    fontWeight: 'bold',
+    color: '#000000',
+    letterSpacing: '1px',
+  },
+  card: {
+    border: '1px solid #000000',
+    padding: '8px',
+    marginBottom: '10px',
+  },
+  cardRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '4px',
+  },
+  cardLabel: {
+    fontSize: '9px',
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  cardValue: {
+    fontSize: '9px',
+    fontWeight: 'normal',
+    color: '#000000',
+  },
+  statusPaid: {
+    fontSize: '9px',
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  statusPending: {
+    fontSize: '9px',
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  section: {
+    marginBottom: '10px',
+  },
+  sectionTitle: {
+    fontSize: '10px',
+    fontWeight: 'bold',
+    color: '#000000',
+    marginBottom: '6px',
+    textDecoration: 'underline',
+  },
+  customerCard: {
+    border: '1px solid #000000',
+    padding: '8px',
+  },
+  customerName: {
+    fontSize: '10px',
+    fontWeight: 'bold',
+    color: '#000000',
+    marginBottom: '4px',
+  },
+  customerDetail: {
+    fontSize: '9px',
+    color: '#000000',
+    marginTop: '3px',
+  },
+  itemsHeader: {
+    display: 'flex',
+    padding: '5px 0',
+    borderBottom: '1px solid #000000',
+    marginBottom: '5px',
+    fontWeight: 'bold',
+  },
+  itemsHeaderText: {
+    fontSize: '9px',
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  itemRow: {
+    display: 'flex',
+    padding: '3px 0',
+  },
+  itemName: {
+    fontSize: '9px',
+    color: '#000000',
+  },
+  itemQty: {
+    fontSize: '9px',
+    color: '#000000',
+  },
+  itemPrice: {
+    fontSize: '9px',
+    color: '#000000',
+  },
+  itemTotal: {
+    fontSize: '9px',
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  totalsCard: {
+    border: '1px solid #000000',
+    padding: '8px',
+    marginBottom: '10px',
+  },
+  totalLine: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: '9px',
+    padding: '3px 0',
+    color: '#000000',
+  },
+  grandTotalLine: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '6px 0 3px',
+    marginTop: '4px',
+    borderTop: '1px solid #000000',
+  },
+  grandTotalText: {
+    fontSize: '10px',
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  grandTotalAmount: {
+    fontSize: '11px',
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  termsCard: {
+    border: '1px solid #000000',
+    padding: '8px',
+    marginBottom: '10px',
+  },
+  termsTitle: {
+    fontSize: '9px',
+    fontWeight: 'bold',
+    color: '#000000',
+    marginBottom: '5px',
+    textDecoration: 'underline',
+  },
+  termItem: {
+    fontSize: '8px',
+    color: '#000000',
+    padding: '2px 0',
+  },
+  footer: {
+    textAlign: 'center',
+    marginTop: '5px',
+  },
+  thankYou: {
+    fontSize: '10px',
+    fontWeight: 'bold',
+    color: '#000000',
+    marginBottom: '4px',
+  },
+  footerText: {
+    fontSize: '8px',
+    color: '#000000',
+    margin: '2px 0',
+  },
+};
 
 export default Invoice;

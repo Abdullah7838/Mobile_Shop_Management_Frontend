@@ -15,7 +15,7 @@ function InvoiceHistory() {
       try {
         const res = await axios.get(`${BackendApi}/api/invoices`);
 
-        setInvoices([...(res.data || [])].reverse());
+        setInvoices([...(res.data.data || [])].reverse());
       } catch (err) {
         console.log(err);
         toast.error("Failed to load invoices");
